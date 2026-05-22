@@ -152,6 +152,7 @@ Bootstrap with `bootstrapApplication()` in `main.ts`. Compose providers via `pro
 | `effect()` for derived state | `computed()` or `linkedSignal()` |
 | Zone.js-dependent patterns | Signals + `OnPush` + zoneless |
 | Classic `trigger()` animations / `@HostBinding('@fade')` | `@animate.enter="'css-class'"` / `host: { '@animate.enter': ... }` |
+| Manual `IntersectionObserver` to lazy-hydrate a component | `@defer (hydrate on viewport) { ... }` with `withIncrementalHydration()` |
 
 ## References
 

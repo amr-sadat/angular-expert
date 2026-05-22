@@ -285,16 +285,103 @@ Hydrate triggers work alongside regular `@defer` triggers. On initial SSR load, 
 
 ### Available hydration triggers
 
-| Trigger | When hydration occurs |
-|---|---|
-| `hydrate on viewport` | Element enters the viewport |
-| `hydrate on idle` | Browser is idle |
-| `hydrate on interaction` | User clicks or focuses |
-| `hydrate on hover` | User hovers |
-| `hydrate on timer(ms)` | After a delay |
-| `hydrate on immediate` | Immediately after page load |
-| `hydrate when condition` | When a boolean expression is true |
-| `hydrate never` | Component stays server-rendered, never hydrates |
+| Trigger | When hydration occurs | Use for |
+|---|---|---|
+| `hydrate on idle` | Browser is idle (via `requestIdleCallback`) | Non-critical above-the-fold widgets that should hydrate soon but not block first paint (e.g. user menu, notification bell) |
+| `hydrate on viewport` | Element enters the viewport | Below-the-fold content (reviews, comments, related products, footer widgets) |
+| `hydrate on interaction` | User clicks or focuses the rendered block | Forms and controls that need JS only after engagement (comment box, expandable settings panel) |
+| `hydrate on hover` | Pointer hovers the rendered block | Tooltips, popovers, dropdown menus on desktop |
+| `hydrate on timer(<duration>)` | After the given delay (e.g. `500ms`, `2s`) | Late-arriving widgets where you know an exact deferral budget |
+| `hydrate on immediate` | As soon as the client bootstraps | Interactive components that must be live ASAP but should still benefit from streaming SSR HTML |
+| `hydrate when <expression>` | When the boolean expression becomes truthy | Hydration gated on app state (e.g. `hydrate when user().isAuthenticated`) |
+| `hydrate never` | Never — stays server-rendered for the lifetime of the page | Truly static content: footers, legal copy, marketing copy that has no interactivity |
+
+> Trigger names match angular.dev exactly. Note `hydrate on immediate` (with `on`) but `hydrate never` (no `on`) — `never` is a standalone predicate, not an `on`-trigger.
+
+### Hydrate triggers vs @placeholder / @loading / @error
+
+Incremental hydration changes how the auxiliary `@defer` blocks behave compared to a client-only `@defer`:
+
+| Block | Client-only `@defer` | `@defer (hydrate ...)` with SSR |
+|---|---|---|
+| `@placeholder` | Shown until the main trigger fires | Rendered on the server **and shipped as the live HTML** users see before hydration. Acts as the SSR shell. |
+| `@loading` | Shown while the JS chunk downloads | Only used if the hydrate trigger fires and the chunk has not yet arrived. The server-rendered defer body remains visible — Angular swaps it in place once the chunk is ready. |
+| `@error` | Shown if chunk download fails | Shown if the chunk fetch fails during hydration; the server-rendered HTML is replaced. |
+
+Key consequence: with incremental hydration, the user sees the **real defer body** (not the placeholder) on first paint, because the server pre-rendered it. The placeholder still matters — it is the fallback when JavaScript is disabled and the SSR sizing/skeleton when the client renders this route without SSR (e.g. follow-up navigation).
+
+### Worked example: below-the-fold reviews widget
+
+```html
+<!-- product-page.component.html -->
+<app-product-hero [product]="product()" />
+<app-product-details [product]="product()" />
+
+@defer (hydrate on viewport) {
+  <app-product-reviews [productId]="product().id" />
+} @placeholder (minimum 500ms) {
+  <div class="reviews-skeleton" aria-busy="true">
+    <div class="review-row"></div>
+    <div class="review-row"></div>
+    <div class="review-row"></div>
+  </div>
+} @error {
+  <p>Reviews are temporarily unavailable.</p>
+}
+```
+
+On first request:
+
+1. Server renders `<app-product-reviews>` into the response HTML — users see real reviews immediately.
+2. The reviews component's JavaScript chunk is **not** in the initial bundle.
+3. On the client, Angular installs an `IntersectionObserver` against the defer block's root element.
+4. When the user scrolls and the block enters the viewport, Angular downloads the chunk and hydrates in place — no DOM swap, no layout shift, event listeners attach to the existing nodes.
+5. If the chunk fetch fails, the `@error` block replaces the server-rendered HTML.
+
+For a route reached by client-side navigation (no SSR for this view), the `@placeholder` block renders until the chunk loads.
+
+### Anti-pattern: manual IntersectionObserver for hydration
+
+Before incremental hydration, teams hand-rolled lazy hydration with `IntersectionObserver` + a custom `*lazyLoad` directive. Don't do this in Angular 20 — it duplicates framework machinery and breaks event replay.
+
+```typescript
+// ❌ Anti-pattern: manual viewport-based lazy mount
+@Component({
+  selector: 'app-product-reviews-lazy',
+  template: `
+    <div #host>
+      @if (mounted()) {
+        <app-product-reviews [productId]="productId()" />
+      }
+    </div>
+  `,
+})
+export class ProductReviewsLazyComponent {
+  productId = input.required<string>();
+  host = viewChild.required<ElementRef<HTMLElement>>('host');
+  mounted = signal(false);
+
+  constructor() {
+    afterNextRender(() => {
+      const io = new IntersectionObserver(([entry]) => {
+        if (entry.isIntersecting) {
+          this.mounted.set(true);
+          io.disconnect();
+        }
+      });
+      io.observe(this.host().nativeElement);
+    });
+  }
+}
+```
+
+Problems:
+
+- The server has no live reviews HTML to ship — `@if (mounted())` is false during SSR.
+- Click/scroll events that fire before mount are lost (no event replay).
+- The reviews chunk is still in the main bundle unless you also lazy-import it manually.
+
+Replace with `@defer (hydrate on viewport) { <app-product-reviews ... /> }` — Angular handles the observer, event replay, code-splitting, and SSR rendering for you.
 
 ## Skipping Hydration
 
