@@ -128,12 +128,14 @@ Bootstrap with `bootstrapApplication()` in `main.ts`. Compose providers via `pro
 - `signal.mutate()` does not exist. Always use `signal.update()` or `signal.set()` with a new object/array reference.
 - While signal writes inside `effect()` are allowed in v20 (`allowSignalWrites` is deprecated — writes are permitted by default), prefer `computed()` or `linkedSignal()` for derived state. Effects that write to signals create implicit data flows that are harder to trace and debug.
 - Reactive Forms `setValue` / `patchValue` do NOT trigger change detection in zoneless apps. Bridge `valueChanges` to a signal via `toSignal()` or manually call `ChangeDetectorRef.markForCheck()`.
+- Custom `ControlValueAccessor` implementations must invoke the `registerOnChange` callback **synchronously** inside the user-input handler. Deferring the call (`setTimeout`, debounced observable without explicit emit) leaves the parent `FormControl` out of sync in zoneless apps until the next CD trigger.
 - `NgOptimizedImage` does NOT work with inline base64/data URIs. Only use it with URL-based image sources.
 - `@for` requires a `track` expression. Omitting it is a compile error. Use a unique identifier (like `item.id`); avoid `$index` unless items never reorder.
 - `NgZone.onStable`, `NgZone.onMicrotaskEmpty`, and `NgZone.isStable` do nothing in zoneless apps. Replace with `afterNextRender` or `afterEveryRender`.
 - Functional guards/resolvers must call `inject()` synchronously at the top of the function — not inside a callback or `setTimeout`.
 - Classic `@angular/animations` (`trigger`, `state`, `transition`, `animate`) is zone-dependent and deprecated since v20.2. In zoneless apps it may silently fail to advance multi-step animation sequences. Use `animate.enter` / `animate.leave` for element animations instead.
 - SSR apps that use `i18n` attributes or `$localize` **must** include `withI18nSupport()` in `provideClientHydration()`. Without it, Angular silently skips hydration for every component with translated text nodes, causing a client-side re-render and a visible content flash.
+- HMR (enabled by default in `ng serve`) does NOT re-run `bootstrapApplication()` or rebuild the provider tree. Edits to `main.ts`, `app.config.ts`, `app.routes.ts`, or any `provide*()` call force a full page reload — component signal state is preserved across template/style edits, but provider and route changes are not. If a provider edit appears to have no effect, hard-refresh.
 - `effect()` runs after change detection but **before the browser has painted** — the DOM may not yet reflect the latest template output. Never read `offsetWidth`, `getBoundingClientRect()`, or other layout properties from `effect()`. Use `afterRenderEffect()` with the `earlyRead` or `read` phase instead, which is guaranteed to run after Angular has flushed all DOM updates. Use `afterNextRender()` for one-time DOM init (focus, third-party lib bootstrap) and `afterEveryRender()` for non-reactive post-render work.
 
 ## Quick Reference: What NOT to Do
@@ -151,6 +153,7 @@ Bootstrap with `bootstrapApplication()` in `main.ts`. Compose providers via `pro
 | `effect()` for derived state | `computed()` or `linkedSignal()` |
 | Zone.js-dependent patterns | Signals + `OnPush` + zoneless |
 | Classic `trigger()` animations / `@HostBinding('@fade')` | `@animate.enter="'css-class'"` / `host: { '@animate.enter': ... }` |
+| Manual `IntersectionObserver` to lazy-hydrate a component | `@defer (hydrate on viewport) { ... }` with `withIncrementalHydration()` |
 
 ## References
 

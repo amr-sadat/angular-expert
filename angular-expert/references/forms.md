@@ -7,6 +7,7 @@
 - [Custom Validators](#custom-validators)
 - [Async Validators](#async-validators)
 - [Dynamic Forms with FormArray](#dynamic-forms-with-formarray)
+- [Custom ControlValueAccessor](#custom-controlvalueaccessor)
 - [Reactive Forms in Zoneless Apps](#reactive-forms-in-zoneless-apps)
 - [Form Patterns](#form-patterns)
 
@@ -242,6 +243,149 @@ export class SkillsFormComponent {
   }
 }
 ```
+
+## Custom ControlValueAccessor
+
+A `ControlValueAccessor` (CVA) is the bridge between a custom input component and Angular's forms API. Implement it whenever you wrap a third-party widget (color picker, rich-text editor, date picker, toggle) so it plugs into `FormControl` / `formControlName` like a native `<input>`.
+
+### The interface
+
+```typescript
+interface ControlValueAccessor {
+  writeValue(obj: any): void;
+  registerOnChange(fn: any): void;
+  registerOnTouched(fn: any): void;
+  setDisabledState?(isDisabled: boolean): void;
+}
+```
+
+| Method | Called by Angular when… | What you do |
+|---|---|---|
+| `writeValue(value)` | Parent form pushes a new value into the control (`setValue`, `patchValue`, initial value) | Update internal state to reflect `value` |
+| `registerOnChange(fn)` | Once, on init | Store `fn`; call it whenever the user changes the value |
+| `registerOnTouched(fn)` | Once, on init | Store `fn`; call it when the control is "touched" (blur) |
+| `setDisabledState(isDisabled)` | Parent calls `control.disable()` / `enable()` | Reflect disabled state in the UI |
+
+### Worked example: signal-based color picker
+
+```typescript
+import {
+  Component,
+  ChangeDetectionStrategy,
+  forwardRef,
+  signal,
+} from '@angular/core';
+import {
+  ControlValueAccessor,
+  FormBuilder,
+  NG_VALUE_ACCESSOR,
+  ReactiveFormsModule,
+} from '@angular/forms';
+
+@Component({
+  selector: 'app-color-picker',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  providers: [
+    {
+      provide: NG_VALUE_ACCESSOR,
+      useExisting: forwardRef(() => ColorPickerComponent),
+      multi: true,
+    },
+  ],
+  template: `
+    <input
+      type="color"
+      [value]="value()"
+      [disabled]="disabled()"
+      (input)="onInput($event)"
+      (blur)="onBlur()"
+    />
+  `,
+})
+export class ColorPickerComponent implements ControlValueAccessor {
+  protected readonly value = signal('#000000');
+  protected readonly disabled = signal(false);
+
+  private onChange: (value: string) => void = () => {};
+  private onTouched: () => void = () => {};
+
+  writeValue(value: string | null): void {
+    this.value.set(value ?? '#000000');
+  }
+
+  registerOnChange(fn: (value: string) => void): void {
+    this.onChange = fn;
+  }
+
+  registerOnTouched(fn: () => void): void {
+    this.onTouched = fn;
+  }
+
+  setDisabledState(isDisabled: boolean): void {
+    this.disabled.set(isDisabled);
+  }
+
+  protected onInput(event: Event): void {
+    const next = (event.target as HTMLInputElement).value;
+    this.value.set(next);
+    this.onChange(next); // synchronous — required for zoneless
+  }
+
+  protected onBlur(): void {
+    this.onTouched();
+  }
+}
+```
+
+### Using it in a Reactive Form
+
+The custom component is now indistinguishable from a native input in the parent form:
+
+```typescript
+@Component({
+  selector: 'app-theme-form',
+  imports: [ReactiveFormsModule, ColorPickerComponent],
+  template: `
+    <form [formGroup]="themeForm">
+      <label>
+        Primary color
+        <app-color-picker formControlName="primary" />
+      </label>
+    </form>
+  `,
+})
+export class ThemeFormComponent {
+  private fb = inject(FormBuilder);
+
+  themeForm = this.fb.nonNullable.group({
+    primary: ['#3366ff'],
+  });
+}
+```
+
+`themeForm.controls.primary.setValue('#ff0000')` calls `writeValue`. User input calls `onChange`, which updates the `FormControl`. `themeForm.controls.primary.disable()` calls `setDisabledState(true)`.
+
+### Provider registration notes
+
+- `NG_VALUE_ACCESSOR` is a **multi-provider** — always set `multi: true`.
+- `useExisting: forwardRef(() => MyComponent)` is required because the provider must reference the class that is still being declared.
+- Register on the **component itself**, not the consumer.
+
+### Zoneless compatibility
+
+- Call the `onChange` callback **synchronously** inside the user-input handler. In zoneless apps, deferring the call (e.g. via `setTimeout`, `queueMicrotask`, or a debounced observable without explicit emission) means the parent `FormControl` does not see the new value until the next change-detection trigger.
+- The component itself uses `OnPush` and signal-driven state — no `markForCheck` needed.
+- `writeValue` is called by the forms engine; updating a signal inside it is safe and synchronous.
+
+### Anti-patterns
+
+| Don't | Do |
+|---|---|
+| Expose the value via `@Input()` / `input()` and read it back via `@Output()` | Implement `ControlValueAccessor` so the value flows through Angular's forms API |
+| Read the current value from `event.target.value` outside the change handler | Track it in a signal (single source of truth) |
+| Forget `multi: true` on the provider — silently overwrites other accessors | Always include `multi: true` |
+| Omit `setDisabledState` and instead expose a `disabled` input | Implement `setDisabledState` so `control.disable()` works |
+| Call `onChange` from an `effect()` that watches the value signal | Call `onChange` directly in the DOM event handler — keeps the data flow explicit and avoids feedback loops with `writeValue` |
 
 ## Reactive Forms in Zoneless Apps
 
