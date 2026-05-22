@@ -86,6 +86,12 @@ Use `animate.enter` and `animate.leave` for element-level entry and exit animati
 
 > Read [references/animations.md](references/animations.md) for `animate.enter` / `animate.leave` syntax, View Transitions setup, provider selection, zoneless notes, and anti-patterns.
 
+## Internationalization (i18n)
+
+Add `@angular/localize` with `ng add @angular/localize`. Mark template strings with the `i18n` attribute and TypeScript strings with `$localize` tagged template literals. Extract messages with `ng extract-i18n`. Choose between build-time locale baking (`ng build --localize`, one bundle per locale, zero runtime overhead) and runtime loading (`loadTranslations()` before `bootstrapApplication()`, one bundle, network round-trip at startup). In SSR apps, always include `withI18nSupport()` in `provideClientHydration()` — omitting it causes hydration to silently skip translated components.
+
+> Read [references/i18n.md](references/i18n.md) for `@angular/localize` setup, `$localize` tagged templates, `i18n` attribute syntax, `ng extract-i18n` output formats, runtime vs build-time tradeoffs, and SSR hydration wiring.
+
 ## Forms
 
 Use **Reactive Forms** (`FormGroup`, `FormControl`, `FormBuilder`) — the stable, production-ready forms API. Use `fb.nonNullable.group()` for strict typing. In zoneless apps, reactive form updates (`setValue`, `patchValue`) do NOT auto-trigger change detection — connect `valueChanges` to signals via `toSignal()` or call `markForCheck()`.
@@ -127,6 +133,7 @@ Bootstrap with `bootstrapApplication()` in `main.ts`. Compose providers via `pro
 - `NgZone.onStable`, `NgZone.onMicrotaskEmpty`, and `NgZone.isStable` do nothing in zoneless apps. Replace with `afterNextRender` or `afterEveryRender`.
 - Functional guards/resolvers must call `inject()` synchronously at the top of the function — not inside a callback or `setTimeout`.
 - Classic `@angular/animations` (`trigger`, `state`, `transition`, `animate`) is zone-dependent and deprecated since v20.2. In zoneless apps it may silently fail to advance multi-step animation sequences. Use `animate.enter` / `animate.leave` for element animations instead.
+- SSR apps that use `i18n` attributes or `$localize` **must** include `withI18nSupport()` in `provideClientHydration()`. Without it, Angular silently skips hydration for every component with translated text nodes, causing a client-side re-render and a visible content flash.
 
 ## Quick Reference: What NOT to Do
 
@@ -158,3 +165,4 @@ All reference files are in the `references/` directory. Read them when you need 
 - [references/testing.md](references/testing.md) — Jasmine best practices, component/service/pipe/directive testing, zoneless testing
 - [references/configuration.md](references/configuration.md) — Bootstrap, providers, environment config
 - [references/animations.md](references/animations.md) — animate.enter / animate.leave, View Transitions, provider selection, zoneless notes
+- [references/i18n.md](references/i18n.md) — @angular/localize setup, $localize tagged templates, i18n attribute, message extraction, runtime vs build-time translation, SSR hydration
