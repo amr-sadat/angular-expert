@@ -23,7 +23,7 @@ Angular 20 provides two complementary animation systems:
 1. **`animate.enter` / `animate.leave`** — element-level CSS-driven animations. These are compiler-supported bindings (not directives), require no imports, and are fully zoneless-compatible.
 2. **View Transitions API** via `withViewTransitions()` — page-level animated route transitions using the browser's native `document.startViewTransition()`.
 
-The classic `@angular/animations` package (`trigger`, `state`, `transition`, `animate`, `keyframes`, `query`, `stagger`) is **deprecated** as of v20.2 and scheduled for removal in v23. New code should never introduce it.
+The classic `@angular/animations` package (`trigger`, `state`, `transition`, `animate`, `keyframes`, `query`, `stagger`) is **deprecated** as of v20.2 and slated for future removal. New code should never introduce it.
 
 | Goal | API |
 |---|---|
@@ -418,7 +418,7 @@ withViewTransitions({
 
 ## provideAnimationsAsync vs provideAnimations
 
-> **Deprecation notice**: Both providers are deprecated since v20.2, targeting removal in v23. They power the classic `@angular/animations` trigger-based engine. **For new code, use `animate.enter` / `animate.leave` — no animation provider is needed.** Use these providers only when maintaining code that depends on the classic API.
+> **Deprecation notice**: Both providers are deprecated since v20.2 and slated for future removal. They power the classic `@angular/animations` trigger-based engine. **For new code, use `animate.enter` / `animate.leave` — no animation provider is needed.** Use these providers only when maintaining code that depends on the classic API.
 
 ### `provideAnimations()` — eager
 
@@ -482,7 +482,7 @@ These APIs delegate animation execution entirely to the browser's CSS engine:
 
 - Angular applies the CSS class synchronously on DOM insertion.
 - The browser owns all animation timing — no JS scheduler is involved.
-- Angular attaches a one-shot `animationend` / `transitionend` listener to know when to remove the class or finalize DOM removal. This listener is a plain DOM API call, not a Zone.js-patched subscription, and does not schedule a change detection cycle.
+- Angular attaches a one-shot `animationend` / `transitionend` listener to know when to remove the class or finalize DOM removal. This delegates to native browser events rather than the classic animation engine's trigger-based state machine.
 
 The result: `animate.enter` / `animate.leave` behave identically in zoneless and zone-based apps.
 

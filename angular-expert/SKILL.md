@@ -5,7 +5,7 @@ description: Expert Angular 20 reference for writing, debugging, and reviewing A
 
 # Angular 20 Expert Skill
 
-Authoritative guidance for building enterprise-grade Angular 20 applications. Every pattern here is sourced from Angular's official documentation at https://angular.dev and uses only **stable, production-ready** APIs. Experimental features (Signal Forms, resource, httpResource, rxResource) are excluded. Developer Preview APIs (`provideCheckNoChangesConfig`, `pendingUntilEvent`) are marked with warnings where used.
+Authoritative guidance for building enterprise-grade Angular 20 applications. Every pattern here is sourced from Angular's official documentation at https://angular.dev and uses only **stable, production-ready** APIs. Experimental features (Signal Forms, resource, httpResource, rxResource) are excluded. Any non-stable APIs referenced are marked with warnings where used.
 
 **Angular 20 requirements:** TypeScript 5.8+, Node.js 20.11.1+.
 
