@@ -80,6 +80,12 @@ Define routes as `Routes` arrays. Use `loadComponent` for lazy loading. Guards a
 
 > Read [references/routing.md](references/routing.md) for guards, resolvers, lazy loading, and route-level render mode.
 
+## Animations
+
+Use `animate.enter` and `animate.leave` for element-level entry and exit animations — these are CSS-driven, require no imports, and are fully zoneless-compatible. The classic `@angular/animations` package (`trigger`, `state`, `transition`) is deprecated as of v20.2. For route-level transitions, add `withViewTransitions()` to the router config to leverage the browser's native View Transitions API. No animation provider is needed for either approach.
+
+> Read [references/animations.md](references/animations.md) for `animate.enter` / `animate.leave` syntax, View Transitions setup, provider selection, zoneless notes, and anti-patterns.
+
 ## Forms
 
 Use **Reactive Forms** (`FormGroup`, `FormControl`, `FormBuilder`) — the stable, production-ready forms API. Use `fb.nonNullable.group()` for strict typing. In zoneless apps, reactive form updates (`setValue`, `patchValue`) do NOT auto-trigger change detection — connect `valueChanges` to signals via `toSignal()` or call `markForCheck()`.
@@ -120,6 +126,7 @@ Bootstrap with `bootstrapApplication()` in `main.ts`. Compose providers via `pro
 - `@for` requires a `track` expression. Omitting it is a compile error. Use a unique identifier (like `item.id`); avoid `$index` unless items never reorder.
 - `NgZone.onStable`, `NgZone.onMicrotaskEmpty`, and `NgZone.isStable` do nothing in zoneless apps. Replace with `afterNextRender` or `afterEveryRender`.
 - Functional guards/resolvers must call `inject()` synchronously at the top of the function — not inside a callback or `setTimeout`.
+- Classic `@angular/animations` (`trigger`, `state`, `transition`, `animate`) is zone-dependent and deprecated since v20.2. In zoneless apps it may silently fail to advance multi-step animation sequences. Use `animate.enter` / `animate.leave` for element animations instead.
 
 ## Quick Reference: What NOT to Do
 
@@ -135,6 +142,7 @@ Bootstrap with `bootstrapApplication()` in `main.ts`. Compose providers via `pro
 | `signal.mutate()` | `signal.update()` or `signal.set()` |
 | `effect()` for derived state | `computed()` or `linkedSignal()` |
 | Zone.js-dependent patterns | Signals + `OnPush` + zoneless |
+| Classic `trigger()` animations / `@HostBinding('@fade')` | `@animate.enter="'css-class'"` / `host: { '@animate.enter': ... }` |
 
 ## References
 
@@ -149,3 +157,4 @@ All reference files are in the `references/` directory. Read them when you need 
 - [references/advanced-patterns.md](references/advanced-patterns.md) — DI, directives, pipes, RxJS interop, architecture
 - [references/testing.md](references/testing.md) — Jasmine best practices, component/service/pipe/directive testing, zoneless testing
 - [references/configuration.md](references/configuration.md) — Bootstrap, providers, environment config
+- [references/animations.md](references/animations.md) — animate.enter / animate.leave, View Transitions, provider selection, zoneless notes
