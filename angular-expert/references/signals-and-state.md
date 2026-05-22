@@ -197,16 +197,16 @@ effect(() => {
 
 ### Render phases
 
-`afterRenderEffect()` takes a spec object with one or more phase callbacks. Phases run in order: `earlyRead` → `write` → `mixedReadWrite` → `read`. Only phases with dirty signal dependencies execute on a given render cycle.
+`afterRenderEffect()` takes a spec object with one or more phase callbacks. Angular runs the four phases in a fixed sequence per render pass and only invokes phases that have dirty signal dependencies.
 
 | Phase | Purpose | Rule |
 |---|---|---|
-| `earlyRead` | Read DOM **before** any writes | Never write to the DOM here |
-| `write` | Write to the DOM | Never read from the DOM here |
-| `mixedReadWrite` | Read and write simultaneously | Avoid if work can be split into `earlyRead`/`write`/`read` |
-| `read` | Read DOM **after** writes are complete | Never write to the DOM here |
+| `earlyRead` | Read the DOM **before** any phase performs a write | Never write to the DOM here |
+| `write` | Write to the DOM | Never read layout-affecting properties here |
+| `mixedReadWrite` | Read and write in the same callback | Avoid when the work can be split into `earlyRead` / `write` / `read` |
+| `read` | Read the DOM **after** all writes have completed | Never write to the DOM here |
 
-Prefer `read` + `write` over `mixedReadWrite` — the two-phase split allows Angular to batch reads and writes, avoiding forced reflows.
+The split exists so Angular can batch writes together and final reads together, avoiding layout thrashing (forced reflows). Prefer explicit `write` + `read` over `mixedReadWrite`.
 
 Each phase (except `earlyRead`) receives the return value of the previous phase as a `Signal<T>`, enabling coordination across phases without additional signals.
 

@@ -345,7 +345,7 @@ For a route reached by client-side navigation (no SSR for this view), the `@plac
 Before incremental hydration, teams hand-rolled lazy hydration with `IntersectionObserver` + a custom `*lazyLoad` directive. Don't do this in Angular 20 — it duplicates framework machinery and breaks event replay.
 
 ```typescript
-// ❌ Anti-pattern: manual viewport-based lazy mount
+// WRONG — manual viewport-based lazy mount duplicates incremental hydration
 @Component({
   selector: 'app-product-reviews-lazy',
   template: `

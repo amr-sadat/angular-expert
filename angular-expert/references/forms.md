@@ -328,7 +328,10 @@ export class ColorPickerComponent implements ControlValueAccessor {
   protected onInput(event: Event): void {
     const next = (event.target as HTMLInputElement).value;
     this.value.set(next);
-    this.onChange(next); // synchronous — required for zoneless
+    // Call onChange synchronously inside the DOM event handler.
+    // Deferring it (setTimeout, debounced subject without explicit emit) leaves
+    // the parent FormControl out of sync until the next CD trigger in zoneless apps.
+    this.onChange(next);
   }
 
   protected onBlur(): void {
@@ -373,7 +376,7 @@ export class ThemeFormComponent {
 
 ### Zoneless compatibility
 
-- Call the `onChange` callback **synchronously** inside the user-input handler. In zoneless apps, deferring the call (e.g. via `setTimeout`, `queueMicrotask`, or a debounced observable without explicit emission) means the parent `FormControl` does not see the new value until the next change-detection trigger.
+- Call the `onChange` callback inside the user-input handler. In zoneless apps, deferring the call (e.g. via `setTimeout`, `queueMicrotask`, or a debounced observable that has not yet emitted) leaves the parent `FormControl` out of sync until the next change-detection trigger. Calling `onChange` directly in the event handler keeps the form value, validators, and dependent computed signals in step with user input.
 - The component itself uses `OnPush` and signal-driven state — no `markForCheck` needed.
 - `writeValue` is called by the forms engine; updating a signal inside it is safe and synchronous.
 
