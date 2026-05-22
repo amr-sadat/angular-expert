@@ -10,13 +10,15 @@ Provides production-ready Angular 20 patterns sourced from the official docs at 
 
 | Area | Key Topics |
 |---|---|
-| **Components** | Standalone, `input()`/`output()`/`model()`, `@defer`, `@let`, `NgOptimizedImage`, content projection, view queries |
+| **Components** | Standalone, `input()`/`output()`/`model()`, `@defer`, `@let`, `NgOptimizedImage`, content projection, view queries, accessibility (ARIA, keyboard, focus, `aria-live`) |
 | **Signals & State** | `signal()`, `computed()`, `linkedSignal()`, `effect()`, `outputFromObservable()`/`outputToObservable()`, signal-based stores |
 | **Routing** | Functional guards/resolvers, lazy loading, view transitions, navigation error handling, scroll management, route-level render mode |
 | **Forms** | Reactive Forms with strict typing, custom/async validators, `FormArray`, zoneless compatibility |
 | **HTTP** | Functional interceptors, `toSignal()` data fetching, HTTP transfer cache, error handling |
 | **SSR & Hydration** | Zoneless, `provideClientHydration()`, incremental hydration, event replay, `TransferState`, platform detection |
 | **Testing** | Jasmine + esbuild-based `@angular/build:unit-test`, signal inputs, zoneless testing, `TestBed.tick()`, SSR testing |
+| **Animations** | `animate.enter`/`animate.leave`, View Transitions API, zoneless compatibility |
+| **i18n** | `@angular/localize`, `$localize` tagged templates, build-time vs runtime loading, SSR hydration |
 | **Architecture** | Smart/dumb components, facade pattern, DI patterns, feature organization |
 
 ## Core Principles
@@ -34,7 +36,7 @@ Provides production-ready Angular 20 patterns sourced from the official docs at 
 angular-expert/
 ├── SKILL.md                          # Main skill entry point
 └── references/
-    ├── components.md                 # Components, directives, @let, @defer, lifecycle
+    ├── components.md                 # Components, directives, @let, @defer, lifecycle, accessibility
     ├── signals-and-state.md          # Signals, RxJS interop, output interop, stores
     ├── routing.md                    # Routes, guards, view transitions, error handling
     ├── forms.md                      # Reactive Forms, validation, zoneless compat
@@ -42,7 +44,9 @@ angular-expert/
     ├── ssr-and-performance.md        # SSR, hydration, zoneless, performance checklist
     ├── advanced-patterns.md          # DI, pipes, directives, architecture
     ├── testing.md                    # Jasmine, zoneless testing, SSR testing
-    └── configuration.md             # Bootstrap, providers, environment, CLI
+    ├── configuration.md             # Bootstrap, providers, environment, CLI
+    ├── animations.md                 # animate.enter/leave, View Transitions, zoneless notes
+    └── i18n.md                       # @angular/localize, $localize, runtime vs build-time, SSR hydration
 ```
 
 ## Usage

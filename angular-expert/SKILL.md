@@ -62,9 +62,9 @@ Use **smart/dumb component separation**: smart (container) components manage sta
 
 ## Component Patterns
 
-Use `input()` and `output()` functions instead of `@Input` / `@Output` decorators. Use `model()` for two-way binding. Set `changeDetection: ChangeDetectionStrategy.OnPush`. Prefer inline templates for small components. Use `class` bindings instead of `ngClass`, and `style` bindings instead of `ngStyle`. Put host bindings in the `host` object of `@Component`/`@Directive` — never use `@HostBinding` or `@HostListener`.
+Use `input()` and `output()` functions instead of `@Input` / `@Output` decorators. Use `model()` for two-way binding. Set `changeDetection: ChangeDetectionStrategy.OnPush`. Prefer inline templates for small components. Use `class` bindings instead of `ngClass`, and `style` bindings instead of `ngStyle`. Put host bindings in the `host` object of `@Component`/`@Directive` — never use `@HostBinding` or `@HostListener`. For accessibility: prefer semantic HTML over ARIA, wire ARIA attributes via the `host` object (`'[attr.aria-expanded]': 'open()'`), add keyboard handlers in `host` listeners, manage focus with `inject(ElementRef)`, and use `aria-live` regions for dynamic announcements.
 
-> Read [references/components.md](references/components.md) for component lifecycle, content projection, view queries, `@defer`, and `NgOptimizedImage`.
+> Read [references/components.md](references/components.md) for component lifecycle, content projection, view queries, `@defer`, `NgOptimizedImage`, and the [Accessibility section](references/components.md#accessibility) for ARIA patterns, keyboard handling, and focus management.
 
 ## Signals & State Management
 

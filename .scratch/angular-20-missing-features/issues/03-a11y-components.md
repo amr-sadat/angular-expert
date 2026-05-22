@@ -1,6 +1,6 @@
 # components.md a11y extension + SKILL.md hookup
 
-Status: ready-for-agent
+Status: done
 Type: AFK
 
 ## Parent
@@ -29,12 +29,12 @@ Source verification: query angular.dev via context7 for the `host` object syntax
 
 ## Acceptance criteria
 
-- [ ] `references/components.md` gains an a11y section with code examples
-- [ ] No CDK a11y APIs introduced
-- [ ] `host` object usage matches the skill's existing anti-`@HostBinding` / `@HostListener` stance
-- [ ] All API patterns verified via context7
-- [ ] `SKILL.md` references the new section
-- [ ] No content changes to unrelated sections in `components.md` or `SKILL.md`
+- [x] `references/components.md` gains an a11y section with code examples
+- [x] No CDK a11y APIs introduced
+- [x] `host` object usage matches the skill's existing anti-`@HostBinding` / `@HostListener` stance
+- [x] All API patterns verified via context7
+- [x] `SKILL.md` references the new section
+- [x] No content changes to unrelated sections in `components.md` or `SKILL.md`
 
 ## Blocked by
 

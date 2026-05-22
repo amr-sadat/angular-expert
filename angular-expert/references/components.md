@@ -8,6 +8,7 @@
 - [Lifecycle Hooks](#lifecycle-hooks)
 - [Content Projection](#content-projection)
 - [Host Bindings](#host-bindings)
+- [Accessibility](#accessibility)
 - [Deferred Loading with @defer](#deferred-loading-with-defer)
 - [NgOptimizedImage](#ngoptimizedimage)
 - [Template Control Flow](#template-control-flow)
@@ -264,6 +265,202 @@ export class TooltipComponent {
   hide() { this.isVisible.set(false); }
 }
 ```
+
+## Accessibility
+
+### Semantic HTML first
+
+Prefer native HTML elements before reaching for ARIA. Native elements carry implicit roles, keyboard behaviour, and focus management at zero cost:
+
+```html
+<!-- Prefer <button> — it's focusable, activates on Enter/Space, has role="button" -->
+<button (click)="submit()">Submit</button>
+
+<!-- Prefer <nav> / <main> / <header> over generic <div> -->
+<nav aria-label="Primary">...</nav>
+<main>...</main>
+```
+
+Only add `role` and keyboard handlers when you must use a non-semantic element.
+
+### ARIA attributes via the `host` object
+
+Wire static ARIA attributes and dynamic ARIA bindings through the `host` object — never through `@HostBinding`:
+
+```typescript
+import { Component, input, signal } from '@angular/core';
+
+@Component({
+  selector: 'app-progressbar',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    // Static role and range bounds
+    'role': 'progressbar',
+    'aria-valuemin': '0',
+    'aria-valuemax': '100',
+    // Dynamic binding — updates whenever value() changes
+    '[attr.aria-valuenow]': 'value()',
+    '[attr.aria-label]': 'label()',
+  },
+  template: `<div class="bar" [style.width.%]="value()"></div>`,
+})
+export class ProgressbarComponent {
+  value = input.required<number>();
+  label = input('Loading');
+}
+```
+
+Key rules:
+- Static ARIA: plain string values (`'role': 'progressbar'`)
+- Dynamic ARIA: `[attr.aria-*]` bindings evaluated against the component class
+- The `[attr.*]` form removes the attribute when the value is `null` — use this to toggle ARIA attributes conditionally
+
+### Keyboard event handlers via the `host` listeners object
+
+Add keyboard handlers in `host` — never with `@HostListener`:
+
+```typescript
+@Component({
+  selector: 'app-disclosure',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    'role': 'button',
+    'tabindex': '0',
+    '[attr.aria-expanded]': 'open()',
+    '(click)': 'toggle()',
+    '(keydown.enter)': 'toggle()',
+    '(keydown.space)': '$event.preventDefault(); toggle()',
+  },
+  template: `
+    <ng-content />
+    @if (open()) {
+      <div role="region"><ng-content select="[panel]" /></div>
+    }
+  `,
+})
+export class DisclosureComponent {
+  open = signal(false);
+  toggle() { this.open.update(v => !v); }
+}
+```
+
+### Focus management with `inject(ElementRef)`
+
+Use `inject(ElementRef)` and the native `.focus()` method for programmatic focus:
+
+```typescript
+import { Component, ElementRef, inject, signal } from '@angular/core';
+
+@Component({
+  selector: 'app-modal',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    'role': 'dialog',
+    'aria-modal': 'true',
+    '[attr.aria-label]': 'title()',
+  },
+  template: `
+    <button #closeBtn (click)="close()">Close</button>
+    <ng-content />
+  `,
+})
+export class ModalComponent {
+  title = input.required<string>();
+  private el = inject(ElementRef);
+
+  open() {
+    // Move focus into the modal so screen readers announce it
+    this.el.nativeElement.focus();
+  }
+
+  close() { /* emit close event */ }
+}
+```
+
+For focus trapping (keeping Tab inside a modal), use native `querySelectorAll` on `nativeElement` to collect focusable elements and handle `keydown.tab` in the `host` listener.
+
+### `aria-live` regions for dynamic content
+
+Announce dynamic updates to screen readers without moving focus:
+
+```typescript
+@Component({
+  selector: 'app-status-announcer',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
+    <!-- polite: waits for current speech to finish -->
+    <div aria-live="polite" aria-atomic="true" class="sr-only">
+      {{ message() }}
+    </div>
+  `,
+  styles: `.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }`,
+})
+export class StatusAnnouncerComponent {
+  message = input('');
+}
+```
+
+| `aria-live` value | When to use |
+|---|---|
+| `polite` | Status messages, search results, form validation (waits for idle) |
+| `assertive` | Time-sensitive errors that must interrupt immediately |
+| `off` (default) | No announcements needed |
+
+### Augmenting native elements
+
+When building a custom interactive component, prefer an **attribute selector on a native element** over a custom element. This gives the component all native keyboard, focus, and ARIA semantics for free — no manual `role`, `tabindex`, or keyboard handlers needed:
+
+```typescript
+// Selector targets the native <button> — all button behaviour is inherited automatically
+@Component({
+  selector: 'button[app-upload]',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    '[attr.aria-busy]': 'uploading()',
+  },
+  template: `
+    @if (uploading()) { <app-spinner /> } @else { <ng-content /> }
+  `,
+})
+export class UploadButtonComponent {
+  uploading = input(false);
+}
+```
+
+Usage — consumers get a real `<button>`:
+
+```html
+<button app-upload [uploading]="saving()">Save</button>
+```
+
+This pattern applies most naturally to `<button>` and `<a>` but works with any element.
+
+### Active navigation links with `ariaCurrentWhenActive`
+
+Use `RouterLinkActive` with `ariaCurrentWhenActive` to mark the active link for screen readers. This adds an `aria-current` attribute automatically when the route matches — no manual binding needed:
+
+```html
+<nav aria-label="Primary">
+  <a routerLink="/home"     routerLinkActive="active" ariaCurrentWhenActive="page">Home</a>
+  <a routerLink="/about"    routerLinkActive="active" ariaCurrentWhenActive="page">About</a>
+  <a routerLink="/settings" routerLinkActive="active" ariaCurrentWhenActive="page">Settings</a>
+</nav>
+```
+
+`aria-current` values: `"page"` (current page), `"step"` (wizard step), `"location"`, `"date"`, `"time"`.
+
+### Anti-patterns
+
+| Anti-pattern | Why it fails | Fix |
+|---|---|---|
+| `<div (click)="action()">` with no `role` | Not keyboard-accessible; invisible to screen readers | Use `<button>` or add `role="button"` + `tabindex="0"` + keyboard handler |
+| `<button><mat-icon>close</mat-icon></button>` with no label | Screen reader reads "close" only if the icon has text content | Add `aria-label="Close dialog"` to the `<button>` |
+| Custom button element (`<app-btn>`) | Loses native focus, keyboard, and role semantics | Use attribute selector `button[app-btn]` to wrap native `<button>` |
+| `@HostBinding('attr.aria-expanded')` | Banned — use `host: { '[attr.aria-expanded]': '...' }` | Move to the `host` object |
+| `aria-hidden="false"` on visible content | Redundant and sometimes confusing; omit it | Remove the attribute entirely |
+| `routerLinkActive` without `ariaCurrentWhenActive` | Active link not announced to screen readers | Add `ariaCurrentWhenActive="page"` alongside `routerLinkActive` |
+
+---
 
 ## Deferred Loading with @defer
 
