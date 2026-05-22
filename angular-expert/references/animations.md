@@ -23,7 +23,7 @@ Angular 20 provides two complementary animation systems:
 1. **`animate.enter` / `animate.leave`** — element-level CSS-driven animations. These are compiler-supported bindings (not directives), require no imports, and are fully zoneless-compatible.
 2. **View Transitions API** via `withViewTransitions()` — page-level animated route transitions using the browser's native `document.startViewTransition()`.
 
-The classic `@angular/animations` package (`trigger`, `state`, `transition`, `animate`, `keyframes`, `query`, `stagger`) is **deprecated** as of v20.2 and slated for future removal. New code should never introduce it.
+The classic `@angular/animations` package (`trigger`, `state`, `transition`, `animate`, `keyframes`, `query`, `stagger`) is **deprecated** in v20 and slated for future removal. New code should never introduce it.
 
 | Goal | API |
 |---|---|
@@ -311,7 +311,7 @@ export class ModalComponent {}
 
 The browser's View Transitions API animates the transition between two rendered states. Angular's router integrates with it via `withViewTransitions()`, wrapping each navigation in `document.startViewTransition()`. The API degrades gracefully in unsupported browsers.
 
-> For the router configuration details, see [references/routing.md](references/routing.md#view-transitions).
+> For the router configuration details, see [routing.md](routing.md#view-transitions).
 
 ### Setup
 
@@ -418,7 +418,7 @@ withViewTransitions({
 
 ## provideAnimationsAsync vs provideAnimations
 
-> **Deprecation notice**: Both providers are deprecated since v20.2 and slated for future removal. They power the classic `@angular/animations` trigger-based engine. **For new code, use `animate.enter` / `animate.leave` — no animation provider is needed.** Use these providers only when maintaining code that depends on the classic API.
+> **Deprecation notice**: Both providers are deprecated in v20 and slated for future removal. They power the classic `@angular/animations` trigger-based engine. **For new code, use `animate.enter` / `animate.leave` — no animation provider is needed.** Use these providers only when maintaining code that depends on the classic API.
 
 ### `provideAnimations()` — eager
 
@@ -478,11 +478,11 @@ In a zoneless app (`provideZonelessChangeDetection()`), Zone.js is absent. The a
 
 ### Why `animate.enter` / `animate.leave` are zoneless-safe
 
-These APIs delegate animation execution entirely to the browser's CSS engine:
+These APIs delegate animation execution to the browser's CSS engine:
 
-- Angular applies the CSS class synchronously on DOM insertion.
+- Angular applies the CSS class on DOM insertion.
 - The browser owns all animation timing — no JS scheduler is involved.
-- Angular attaches a one-shot `animationend` / `transitionend` listener to know when to remove the class or finalize DOM removal. This delegates to native browser events rather than the classic animation engine's trigger-based state machine.
+- Angular listens for native `animationend` / `transitionend` events to know when to remove the class or finalize DOM removal — no trigger-based state machine is involved.
 
 The result: `animate.enter` / `animate.leave` behave identically in zoneless and zone-based apps.
 

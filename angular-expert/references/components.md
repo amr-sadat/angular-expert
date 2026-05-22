@@ -415,6 +415,7 @@ When building a custom interactive component, prefer an **attribute selector on 
 @Component({
   selector: 'button[app-upload]',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [SpinnerComponent],
   host: {
     '[attr.aria-busy]': 'uploading()',
   },
