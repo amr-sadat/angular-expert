@@ -12,12 +12,6 @@
 
 ---
 
-## Prerequisites
-
-Angular 20 requires:
-- **TypeScript** 5.8+
-- **Node.js** 20.11.1+ (v18 and early v22 are dropped)
-
 ## Bootstrap Configuration
 
 Angular 20 applications bootstrap with `bootstrapApplication()` — no `AppModule` needed.
