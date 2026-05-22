@@ -128,6 +128,7 @@ Bootstrap with `bootstrapApplication()` in `main.ts`. Compose providers via `pro
 - `signal.mutate()` does not exist. Always use `signal.update()` or `signal.set()` with a new object/array reference.
 - While signal writes inside `effect()` are allowed in v20 (`allowSignalWrites` is deprecated — writes are permitted by default), prefer `computed()` or `linkedSignal()` for derived state. Effects that write to signals create implicit data flows that are harder to trace and debug.
 - Reactive Forms `setValue` / `patchValue` do NOT trigger change detection in zoneless apps. Bridge `valueChanges` to a signal via `toSignal()` or manually call `ChangeDetectorRef.markForCheck()`.
+- Custom `ControlValueAccessor` implementations must invoke the `registerOnChange` callback **synchronously** inside the user-input handler. Deferring the call (`setTimeout`, debounced observable without explicit emit) leaves the parent `FormControl` out of sync in zoneless apps until the next CD trigger.
 - `NgOptimizedImage` does NOT work with inline base64/data URIs. Only use it with URL-based image sources.
 - `@for` requires a `track` expression. Omitting it is a compile error. Use a unique identifier (like `item.id`); avoid `$index` unless items never reorder.
 - `NgZone.onStable`, `NgZone.onMicrotaskEmpty`, and `NgZone.isStable` do nothing in zoneless apps. Replace with `afterNextRender` or `afterEveryRender`.
