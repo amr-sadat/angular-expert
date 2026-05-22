@@ -7,8 +7,6 @@ description: Expert Angular 20 reference for writing, debugging, and reviewing A
 
 Authoritative guidance for building enterprise-grade Angular 20 applications. Every pattern here is sourced from Angular's official documentation at https://angular.dev and uses only **stable, production-ready** APIs. Experimental features (Signal Forms, resource, httpResource, rxResource) are excluded. Any non-stable APIs referenced are marked with warnings where used.
 
-**Angular 20 requirements:** TypeScript 5.8+, Node.js 20.11.1+.
-
 ## Core Principles
 
 1. **Standalone by default** — Components, directives, and pipes are standalone. Do NOT set `standalone: true` in decorators — it is the default. NgModules are legacy; avoid creating new ones.
