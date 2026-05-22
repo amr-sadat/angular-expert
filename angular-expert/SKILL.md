@@ -68,11 +68,11 @@ Use `input()` and `output()` functions instead of `@Input` / `@Output` decorator
 
 ## Signals & State Management
 
-`signal()` is the foundation. `computed()` derives read-only state. `linkedSignal()` provides writable derived state with access to the previous value. `effect()` runs side effects when signals change — use sparingly and only for syncing with external systems (DOM, localStorage, analytics). While signal writes inside `effect()` are technically allowed in v20, prefer `computed()` or `linkedSignal()` for derived state — they produce clearer, more predictable data flows.
+`signal()` is the foundation. `computed()` derives read-only state. `linkedSignal()` provides writable derived state with access to the previous value. `effect()` runs side effects when signals change — use sparingly and only for syncing with **non-DOM** external systems (localStorage, analytics). When a side effect must read or write the DOM (measure layout, init a canvas, sync a third-party library), use `afterRenderEffect()` instead — it runs after Angular has flushed DOM updates, guaranteeing the DOM reflects the latest render. While signal writes inside `effect()` are technically allowed in v20, prefer `computed()` or `linkedSignal()` for derived state — they produce clearer, more predictable data flows.
 
 For async data, use `HttpClient` with `toSignal()` to bridge Observables into the signal world.
 
-> Read [references/signals-and-state.md](references/signals-and-state.md) for signal patterns, store patterns, and RxJS interop.
+> Read [references/signals-and-state.md](references/signals-and-state.md) for signal patterns, store patterns, RxJS interop, and `afterRenderEffect` phases.
 
 ## Routing
 
@@ -134,6 +134,7 @@ Bootstrap with `bootstrapApplication()` in `main.ts`. Compose providers via `pro
 - Functional guards/resolvers must call `inject()` synchronously at the top of the function — not inside a callback or `setTimeout`.
 - Classic `@angular/animations` (`trigger`, `state`, `transition`, `animate`) is zone-dependent and deprecated since v20.2. In zoneless apps it may silently fail to advance multi-step animation sequences. Use `animate.enter` / `animate.leave` for element animations instead.
 - SSR apps that use `i18n` attributes or `$localize` **must** include `withI18nSupport()` in `provideClientHydration()`. Without it, Angular silently skips hydration for every component with translated text nodes, causing a client-side re-render and a visible content flash.
+- `effect()` runs after change detection but **before the browser has painted** — the DOM may not yet reflect the latest template output. Never read `offsetWidth`, `getBoundingClientRect()`, or other layout properties from `effect()`. Use `afterRenderEffect()` with the `earlyRead` or `read` phase instead, which is guaranteed to run after Angular has flushed all DOM updates. Use `afterNextRender()` for one-time DOM init (focus, third-party lib bootstrap) and `afterEveryRender()` for non-reactive post-render work.
 
 ## Quick Reference: What NOT to Do
 

@@ -5,6 +5,7 @@
 - [Computed Signals](#computed-signals)
 - [Linked Signals](#linked-signals)
 - [Effects](#effects)
+- [afterRenderEffect](#afterrendereffect)
 - [RxJS Interop](#rxjs-interop)
 - [State Management Patterns](#state-management-patterns)
 
@@ -169,6 +170,128 @@ effect(() => {
   this.analytics.track(name, id);
 });
 ```
+
+## afterRenderEffect
+
+`afterRenderEffect()` registers signal-reactive callbacks that run **after the application finishes rendering** — i.e., after Angular has updated the DOM. Use it whenever a side effect must read or write the DOM (e.g., measuring element dimensions, initialising a canvas, syncing a third-party layout library).
+
+### How it differs from `effect()`
+
+| | `effect()` | `afterRenderEffect()` |
+|---|---|---|
+| When it runs | After change detection, before the browser paints | After Angular DOM updates are flushed to the browser |
+| DOM safety | DOM may not yet reflect latest template output | DOM is up-to-date — safe to read layout |
+| Reactivity | Re-runs when signal dependencies change | Re-runs when signal dependencies change AND only after the next render |
+| SSR | Runs on server | Browser only — no-ops on the server |
+| Typical use | localStorage, analytics, non-DOM external systems | DOM measurement, canvas, third-party layout libraries |
+
+**Anti-pattern:** reading layout from `effect()`.
+
+```typescript
+// BAD — DOM may not yet reflect latest template output when this runs
+effect(() => {
+  const width = this.containerRef.nativeElement.offsetWidth; // stale/wrong
+  this.columns.set(Math.floor(width / 200));
+});
+```
+
+### Render phases
+
+`afterRenderEffect()` takes a spec object with one or more phase callbacks. Phases run in order: `earlyRead` → `write` → `mixedReadWrite` → `read`. Only phases with dirty signal dependencies execute on a given render cycle.
+
+| Phase | Purpose | Rule |
+|---|---|---|
+| `earlyRead` | Read DOM **before** any writes | Never write to the DOM here |
+| `write` | Write to the DOM | Never read from the DOM here |
+| `mixedReadWrite` | Read and write simultaneously | Avoid if work can be split into `earlyRead`/`write`/`read` |
+| `read` | Read DOM **after** writes are complete | Never write to the DOM here |
+
+Prefer `read` + `write` over `mixedReadWrite` — the two-phase split allows Angular to batch reads and writes, avoiding forced reflows.
+
+Each phase (except `earlyRead`) receives the return value of the previous phase as a `Signal<T>`, enabling coordination across phases without additional signals.
+
+### Worked example: measuring DOM dimensions after layout
+
+```typescript
+import { Component, ElementRef, signal, viewChild, afterRenderEffect } from '@angular/core';
+
+@Component({
+  selector: 'app-responsive-grid',
+  template: `
+    <div #container class="grid-container">
+      @for (item of items(); track item.id) {
+        <div class="grid-item">{{ item.label }}</div>
+      }
+    </div>
+  `,
+})
+export class ResponsiveGridComponent {
+  container = viewChild.required<ElementRef<HTMLDivElement>>('container');
+  items = signal([/* ... */]);
+  columns = signal(1);
+
+  constructor() {
+    afterRenderEffect({
+      // Phase 1: read container width from the DOM
+      earlyRead: () => {
+        return this.container().nativeElement.getBoundingClientRect().width;
+      },
+      // Phase 2: write the computed column count to a signal
+      // Receives earlyRead's return value as a Signal<number>
+      write: (containerWidth) => {
+        const cols = Math.max(1, Math.floor(containerWidth() / 200));
+        this.columns.set(cols);
+      },
+    });
+  }
+}
+```
+
+### Example: initialising a third-party chart after every render
+
+```typescript
+import { afterRenderEffect, ElementRef, inject } from '@angular/core';
+
+export class ChartComponent {
+  private el = inject(ElementRef);
+  chartData = signal<number[]>([]);
+
+  constructor() {
+    afterRenderEffect({
+      // read phase: safe to measure final DOM state, no writes needed
+      read: () => {
+        const canvas = this.el.nativeElement.querySelector('canvas');
+        renderChart(canvas, this.chartData()); // third-party lib
+      },
+    });
+  }
+}
+```
+
+### Decision: `afterRenderEffect` vs `effect` vs `afterNextRender` / `afterEveryRender`
+
+| Scenario | Use |
+|---|---|
+| Side effect on signal change, no DOM needed | `effect()` |
+| DOM read/write reactive to signal changes (recurring) | `afterRenderEffect()` |
+| One-time DOM init (e.g., focus, scroll, third-party init) | `afterNextRender()` |
+| DOM work after every render, not signal-driven | `afterEveryRender()` |
+
+### Cleanup
+
+Phase callbacks receive an `onCleanup` function as their last argument (after the optional previous-phase `Signal`):
+
+```typescript
+afterRenderEffect({
+  read: (onCleanup) => {
+    const observer = new ResizeObserver(() => { /* ... */ });
+    observer.observe(this.el.nativeElement);
+    onCleanup(() => observer.disconnect());
+  },
+});
+```
+
+---
 
 ## RxJS Interop
 

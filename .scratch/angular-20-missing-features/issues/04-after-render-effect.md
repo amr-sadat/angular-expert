@@ -1,6 +1,6 @@
 # signals-and-state.md afterRenderEffect extension + SKILL.md gotcha
 
-Status: ready-for-agent
+Status: done
 Type: AFK
 
 ## Parent
@@ -28,11 +28,11 @@ Source verification: query angular.dev via context7 for the exact phase names an
 
 ## Acceptance criteria
 
-- [ ] `references/signals-and-state.md` gains an `afterRenderEffect` section with examples for at least two phases
-- [ ] Phase names exactly match angular.dev
-- [ ] `SKILL.md` Gotchas section gains the new entry
-- [ ] No content changes to unrelated sections
-- [ ] No experimental APIs introduced
+- [x] `references/signals-and-state.md` gains an `afterRenderEffect` section with examples for at least two phases
+- [x] Phase names exactly match angular.dev
+- [x] `SKILL.md` Gotchas section gains the new entry
+- [x] No content changes to unrelated sections
+- [x] No experimental APIs introduced
 
 ## Blocked by
 
